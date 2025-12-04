@@ -16,8 +16,8 @@ class CreateArticlesTable extends Migration
     {
         DB::statement('CREATE TABLE articles (
             id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-            title VARCHAR(255) COLLATE latin1_general_ci,
-            content TEXT COLLATE latin1_general_ci,
+            title VARCHAR(255) COLLATE utf8mb4_unicode_ci,
+            content TEXT COLLATE utf8mb4_unicode_ci,
             author_id BIGINT UNSIGNED NOT NULL,
             image_path VARCHAR(255) NULL,
             published_at TIMESTAMP NULL,
