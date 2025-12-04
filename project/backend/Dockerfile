@@ -5,6 +5,8 @@ RUN apt-get update && apt-get install -y \
     git \
     curl \
     libpng-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
     libonig-dev \
     libxml2-dev \
     zip \
@@ -13,11 +15,12 @@ RUN apt-get update && apt-get install -y \
 # Clear cache
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install PHP extensions
-RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
+# Install PHP extensions with JPEG support
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
 
-RUN echo "upload_max_filesize = 2M" > /usr/local/etc/php/conf.d/uploads.ini \
-    && echo "post_max_size = 2M" >> /usr/local/etc/php/conf.d/uploads.ini
+RUN echo "upload_max_filesize = 10M" > /usr/local/etc/php/conf.d/uploads.ini \
+    && echo "post_max_size = 10M" >> /usr/local/etc/php/conf.d/uploads.ini
 
 # Get latest Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
