@@ -56,7 +56,7 @@ class CommentController extends Controller
         Cache::forget('stats');
 
         $remainingComments = Comment::where('article_id', $articleId)->get();
-        $firstComment = $remainingComments[0];
+        $firstComment = $remainingComments->first();
 
         return response()->json([
             'message' => 'Comment deleted successfully',

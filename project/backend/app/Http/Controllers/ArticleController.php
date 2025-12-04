@@ -21,7 +21,7 @@ class ArticleController extends Controller
 
         // Cache pour 1 minute (60 secondes)
         $data = Cache::remember('articles_list', 60, function () use ($request) {
-            $articles = Article::all();
+            $articles = Article::with('author')->withCount('comments')->get();
 
             return $articles->map(function ($article) use ($request) {
                 return [
@@ -29,7 +29,7 @@ class ArticleController extends Controller
                     'title' => $article->title,
                     'content' => substr($article->content, 0, 200) . '...',
                     'author' => $article->author->name,
-                    'comments_count' => $article->comments->count(),
+                    'comments_count' => $article->comments_count,
                     'published_at' => $article->published_at,
                     'created_at' => $article->created_at,
                 ];
@@ -44,7 +44,7 @@ class ArticleController extends Controller
      */
     private function getArticlesWithoutCache(Request $request)
     {
-        $articles = Article::all();
+        $articles = Article::with('author')->withCount('comments')->get();
 
         $articles = $articles->map(function ($article) use ($request) {
             if ($request->has('performance_test')) {
@@ -56,7 +56,7 @@ class ArticleController extends Controller
                 'title' => $article->title,
                 'content' => substr($article->content, 0, 200) . '...',
                 'author' => $article->author->name,
-                'comments_count' => $article->comments->count(),
+                'comments_count' => $article->comments_count,
                 'published_at' => $article->published_at,
                 'created_at' => $article->created_at,
             ];
@@ -103,18 +103,16 @@ class ArticleController extends Controller
             return response()->json([]);
         }
 
-        $articles = DB::select(
-            "SELECT * FROM articles WHERE title LIKE '%" . $query . "%'"
-        );
+        $articles = Article::where('title', 'LIKE', '%' . $query . '%')->get();
 
-        $results = array_map(function ($article) {
+        $results = $articles->map(function ($article) {
             return [
                 'id' => $article->id,
                 'title' => $article->title,
                 'content' => substr($article->content, 0, 200),
                 'published_at' => $article->published_at,
             ];
-        }, $articles);
+        });
 
         return response()->json($results);
     }

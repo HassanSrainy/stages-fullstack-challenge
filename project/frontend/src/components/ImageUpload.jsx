@@ -86,17 +86,35 @@ function ImageUpload() {
       )}
 
       {uploadedImage && (
-        <div style={{ 
-          padding: '0.8rem', 
-          backgroundColor: '#f8f9fa',
-          borderRadius: '4px',
-          marginBottom: '1rem',
-          fontSize: '0.85em'
-        }}>
-          <strong>Détails :</strong>
-          <div>Path: {uploadedImage.path}</div>
-          <div>Size: {(uploadedImage.size / 1024).toFixed(2)} KB</div>
-        </div>
+        <>
+          <div style={{ 
+            padding: '0.8rem', 
+            backgroundColor: '#f8f9fa',
+            borderRadius: '4px',
+            marginBottom: '1rem',
+            fontSize: '0.85em'
+          }}>
+            <strong>Détails :</strong>
+            <div>Path: {uploadedImage.path}</div>
+            <div>Size: {(uploadedImage.size / 1024).toFixed(2)} KB</div>
+          </div>
+          
+          <div style={{ marginBottom: '1rem' }}>
+            <img 
+              src={`http://localhost:8000${uploadedImage.url}`}
+              alt="Uploaded image"
+              loading="lazy"
+              width="600"
+              height="400"
+              style={{ 
+                maxWidth: '100%', 
+                height: 'auto',
+                borderRadius: '4px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+              }}
+            />
+          </div>
+        </>
       )}
 
       <button 
