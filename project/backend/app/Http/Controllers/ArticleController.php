@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Article;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 class ArticleController extends Controller
 {
@@ -12,6 +13,36 @@ class ArticleController extends Controller
      * Display a listing of articles.
      */
     public function index(Request $request)
+    {
+        // Ne pas cacher en mode test de performance
+        if ($request->has('performance_test')) {
+            return $this->getArticlesWithoutCache($request);
+        }
+
+        // Cache pour 1 minute (60 secondes)
+        $data = Cache::remember('articles_list', 60, function () use ($request) {
+            $articles = Article::with('author')->withCount('comments')->get();
+
+            return $articles->map(function ($article) use ($request) {
+                return [
+                    'id' => $article->id,
+                    'title' => $article->title,
+                    'content' => substr($article->content, 0, 200) . '...',
+                    'author' => $article->author->name,
+                    'comments_count' => $article->comments_count,
+                    'published_at' => $article->published_at,
+                    'created_at' => $article->created_at,
+                ];
+            })->toArray();
+        });
+
+        return response()->json($data);
+    }
+
+    /**
+     * Get articles without cache (helper method).
+     */
+    private function getArticlesWithoutCache(Request $request)
     {
         $articles = Article::with('author')->withCount('comments')->get();
 
@@ -106,6 +137,10 @@ class ArticleController extends Controller
             'published_at' => now(),
         ]);
 
+        // Invalider le cache
+        Cache::forget('articles_list');
+        Cache::forget('stats');
+
         return response()->json($article, 201);
     }
 
@@ -123,6 +158,10 @@ class ArticleController extends Controller
 
         $article->update($validated);
 
+        // Invalider le cache
+        Cache::forget('articles_list');
+        Cache::forget('stats');
+
         return response()->json($article);
     }
 
@@ -133,6 +172,10 @@ class ArticleController extends Controller
     {
         $article = Article::findOrFail($id);
         $article->delete();
+
+        // Invalider le cache
+        Cache::forget('articles_list');
+        Cache::forget('stats');
 
         return response()->json(['message' => 'Article deleted successfully']);
     }
