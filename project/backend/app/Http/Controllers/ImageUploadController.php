@@ -9,7 +9,7 @@ use Illuminate\Support\Str;
 class ImageUploadController extends Controller
 {
     /**
-     * Handle image upload.
+     * Handle image upload with optimization.
      */
     public function upload(Request $request)
     {
@@ -21,15 +21,64 @@ class ImageUploadController extends Controller
             return response()->json(['error' => 'No image provided'], 400);
         }
 
-        $image = $request->file('image');
-        $filename = Str::random(20) . '.' . $image->getClientOriginalExtension();
-        $path = $image->storeAs('images', $filename, 'public');
+        $uploadedImage = $request->file('image');
+        $filename = Str::random(20) . '.jpg';
+        
+        // Optimiser l'image avec GD natif
+        $originalPath = $uploadedImage->getRealPath();
+        $imageInfo = getimagesize($originalPath);
+        
+        // Créer l'image source selon le type
+        switch ($imageInfo[2]) {
+            case IMAGETYPE_JPEG:
+                $sourceImage = \imagecreatefromjpeg($originalPath);
+                break;
+            case IMAGETYPE_PNG:
+                $sourceImage = \imagecreatefrompng($originalPath);
+                break;
+            case IMAGETYPE_GIF:
+                $sourceImage = \imagecreatefromgif($originalPath);
+                break;
+            default:
+                return response()->json(['error' => 'Unsupported image type'], 400);
+        }
+        
+        // Dimensions originales
+        $originalWidth = \imagesx($sourceImage);
+        $originalHeight = \imagesy($sourceImage);
+        
+        // Redimensionner si trop grand (max 1200px de largeur)
+        $maxWidth = 1200;
+        if ($originalWidth > $maxWidth) {
+            $newWidth = $maxWidth;
+            $newHeight = (int)($originalHeight * ($maxWidth / $originalWidth));
+        } else {
+            $newWidth = $originalWidth;
+            $newHeight = $originalHeight;
+        }
+        
+        // Créer la nouvelle image
+        $optimizedImage = \imagecreatetruecolor($newWidth, $newHeight);
+        \imagecopyresampled($optimizedImage, $sourceImage, 0, 0, 0, 0, $newWidth, $newHeight, $originalWidth, $originalHeight);
+        
+        // Sauvegarder avec compression 80%
+        $tempPath = \sys_get_temp_dir() . '/' . $filename;
+        \imagejpeg($optimizedImage, $tempPath, 80);
+        
+        // Libérer la mémoire
+        \imagedestroy($sourceImage);
+        \imagedestroy($optimizedImage);
+        
+        // Stocker dans Laravel Storage
+        $path = 'images/' . $filename;
+        Storage::disk('public')->put($path, file_get_contents($tempPath));
+        unlink($tempPath);
         
         return response()->json([
-            'message' => 'Image uploaded successfully',
+            'message' => 'Image uploaded and optimized successfully',
             'path' => $path,
             'url' => '/storage/' . $path,
-            'size' => $image->getSize(),
+            'size' => Storage::disk('public')->size($path),
         ], 201);
     }
 
